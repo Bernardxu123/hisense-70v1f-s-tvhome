@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="btn_settings" type="id" />
+    <item name="btn_all" type="id" />
+    <item name="btn_dock" type="id" />
+    <item name="grid_area" type="id" />
+    <item name="grid_scroll" type="id" />
+</resources>
