@@ -15,7 +15,7 @@
 ## 目录
 
 ```
-AndroidManifest.xml     清单（HOME filter + priority 100）
+AndroidManifest.xml     清单（HOME filter + priority 100 + BOOT_COMPLETED 接收器）
 src/com/local/tvhome/
   MainActivity.java     主屏：时钟、Dock、卡片网格、长按菜单
   AllAppsActivity.java  全部应用
@@ -23,10 +23,11 @@ src/com/local/tvhome/
   IconLoader.java       图标加载与缓存
   AppEntry.java         应用条目模型
   TileBackground.java   卡片背景绘制
+  BootReceiver.java     开机后把自己带回前台（框架软重启也管用）
 res/                    资源（颜色、图标占位）
 adddex.py               把 classes.dex 塞进 aapt2 产出的 APK
 build_app.ps1           一键构建（aapt2 → javac → d8 → 签名）
-TvHome.apk              已构建好的成品（v1.2，versionCode 3）
+TvHome.apk              已构建好的成品（v1.4，versionCode 8）
 ```
 
 ## 构建
@@ -95,6 +96,25 @@ sync && mount -o remount,ro /
 
 `priority="100"` 是为了盖过聚好看的 50。**但只有系统应用才保得住这个优先级**：
 普通应用装上去会被固件钳成 0。
+
+## 开机自愈：BootReceiver（v1.4 起）
+
+`BootReceiver.java` 解决一个很坑的问题：海信的「开机」经常只是 **Android 框架重启**（内核不重启，
+`uptime` 还是几天），这时 init 不会重跑 `autorun`，shell 钩子不会执行，系统把上次的桌面（聚好看）
+恢复出来——用户看到的就是"开机进聚好看"。
+
+做法：
+
+- 只监听 `BOOT_COMPLETED`（框架重启也会发）；
+- 用 `AlarmManager` 从开机后 8 秒起、约 60 秒内分 10 个检查点（进程被杀也不丢）；
+- 每个检查点只在「自己不在前台」时 `startActivity` 把自己带上来；
+- 自己在前台就停，不常驻、不写日志。
+
+两个已经踩过的坑写在代码注释里了，简单说：
+
+1. **不要监听 `MY_PACKAGE_REPLACED`** —— 装更新时它会在用户看片中途把桌面糊上来。
+2. **非平台签名的系统应用看不到别的应用在前台**（实测 `getRunningAppProcesses()` 只返回自己的进程），
+   所以不能"检测到聚好看才动手"，只能靠"自己是否在前台"这个可靠信号。
 
 ## 已知限制
 
