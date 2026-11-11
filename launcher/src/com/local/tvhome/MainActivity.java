@@ -1057,9 +1057,7 @@ public class MainActivity extends Activity implements View.OnClickListener,
             repo.setLastClean(System.currentTimeMillis());
             if (statusDot != null) statusDot.setTextColor(0xFF4CAF50);
             android.util.Log.i(TAG, "L0 killBackgroundProcesses(" + KILL_PKG + ")");
-            // 聚好看有常驻服务，killBackgroundProcesses 经常杀不掉；再补一次真正的强制停止
-            StockCleaner.clean(this);
-            if (toast) Toast.makeText(this, "已清理聚好看进程", Toast.LENGTH_SHORT).show();
+            if (toast) Toast.makeText(this, "已清理聚好看插件进程", Toast.LENGTH_SHORT).show();
         } catch (Throwable t) {
             android.util.Log.w(TAG, "L0 failed", t);
             if (toast) Toast.makeText(this, "清理失败", Toast.LENGTH_SHORT).show();
@@ -1128,6 +1126,7 @@ public class MainActivity extends Activity implements View.OnClickListener,
         return Math.round(getResources().getDisplayMetrics().density * v);
     }
 }
+
 
 
 

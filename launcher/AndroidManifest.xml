@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.local.tvhome"
-    android:versionCode="9"
-    android:versionName="1.5">
+    android:versionCode="12"
+    android:versionName="1.8">
 
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="28" />
 
@@ -52,6 +52,16 @@
 
              下面这个接收器只用于调试：不切换界面，只在后台跑一次清理，便于用 adb 验证权限。
              不想保留可以整段删掉，不影响 TvHome 正常使用。 -->
+        <!-- 开机后切一次到自己（只在前 10 秒尝试，切到就停） -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
         <receiver
             android:name=".DebugReceiver"
             android:exported="true"
@@ -62,6 +72,9 @@
         </receiver>
     </application>
 </manifest>
+
+
+
 
 
 
