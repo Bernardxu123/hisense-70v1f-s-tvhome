@@ -23,11 +23,12 @@ src/com/local/tvhome/
   IconLoader.java       图标加载与缓存
   AppEntry.java         应用条目模型
   TileBackground.java   卡片背景绘制
-  BootReceiver.java     开机后把自己带回前台（框架软重启也管用）
+  StockCleaner.java     进入桌面时清理聚好看进程（三级降级策略）
+  DebugReceiver.java    调试用：adb 广播触发一次清理（不切界面）
 res/                    资源（颜色、图标占位）
 adddex.py               把 classes.dex 塞进 aapt2 产出的 APK
 build_app.ps1           一键构建（aapt2 → javac → d8 → 签名）
-TvHome.apk              已构建好的成品（v1.4，versionCode 8）
+TvHome.apk              已构建好的成品（v1.5，versionCode 9）
 ```
 
 ## 构建
@@ -97,24 +98,34 @@ sync && mount -o remount,ro /
 `priority="100"` 是为了盖过聚好看的 50。**但只有系统应用才保得住这个优先级**：
 普通应用装上去会被固件钳成 0。
 
-## 开机自愈：BootReceiver（v1.4 起）
+## 行为：不抢前台，进入时清理（v1.5 起）
 
-`BootReceiver.java` 解决一个很坑的问题：海信的「开机」经常只是 **Android 框架重启**（内核不重启，
-`uptime` 还是几天），这时 init 不会重跑 `autorun`，shell 钩子不会执行，系统把上次的桌面（聚好看）
-恢复出来——用户看到的就是"开机进聚好看"。
+**v1.4 曾经在开机后自动把 TvHome 拉到前台，已废弃。** 原因很实际：那个逻辑有 60 秒窗口，
+用户开机后手动进 TvHome、再打开爱奇艺时会被它拽回桌面，属于误触。现在改成：
 
-做法：
+- **开机就停在聚好看**，TvHome 完全由用户手动进入（主页键 / 图标）；
+- **每次 TvHome 回到前台时**（`MainActivity.onResume` → `doCleanIfNeeded` → `StockCleaner`）
+  清理聚好看进程，省内存、也不让它再抢回来；
+- 有 60 秒去抖，避免频繁清理；清理开关在桌面设置里可以关掉。
 
-- 只监听 `BOOT_COMPLETED`（框架重启也会发）；
-- 用 `AlarmManager` 从开机后 8 秒起、约 60 秒内分 10 个检查点（进程被杀也不丢）；
-- 每个检查点只在「自己不在前台」时 `startActivity` 把自己带上来；
-- 自己在前台就停，不常驻、不写日志。
+### 清理为什么要特权权限
 
-两个已经踩过的坑写在代码注释里了，简单说：
+实测这台机器上：
 
-1. **不要监听 `MY_PACKAGE_REPLACED`** —— 装更新时它会在用户看片中途把桌面糊上来。
-2. **非平台签名的系统应用看不到别的应用在前台**（实测 `getRunningAppProcesses()` 只返回自己的进程），
-   所以不能"检测到聚好看才动手"，只能靠"自己是否在前台"这个可靠信号。
+| 方式 | 结果 |
+|---|---|
+| `am kill`（= `killBackgroundProcesses`） | ❌ 进程还在（聚好看有常驻服务托着） |
+| `am force-stop` | ✅ 进程消失，`MemAvailable` 758 MB → 860 MB |
+
+`force-stop` 需要 `android.permission.FORCE_STOP_PACKAGES`（`signature|privileged`），
+所以必须：
+
+1. TvHome 装在 `/system/priv-app`（已经是）；
+2. 在 `/system/etc/permissions/` 里加一条特权权限白名单（`scripts/privapp-tvhome.xml`，
+   由开机钩子自动复制）。参考实现：系统自带的 `com.android.tv.settings` 就是这样拿到该权限的。
+
+`StockCleaner` 里按「`killBackgroundProcesses` → 反射 `forceStopPackage` → `exec am force-stop`」
+三级降级，哪级成功都能清理；都没权限时只记日志（`adb logcat -s TvHomeKill`），不影响使用。
 
 ## 已知限制
 
@@ -125,3 +136,4 @@ sync && mount -o remount,ro /
 ## License
 
 MIT
+

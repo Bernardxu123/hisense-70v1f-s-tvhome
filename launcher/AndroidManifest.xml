@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.local.tvhome"
-    android:versionCode="8"
-    android:versionName="1.4">
+    android:versionCode="9"
+    android:versionName="1.5">
 
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="28" />
 
     <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
+    <!-- 强制停止聚好看：signature|privileged 权限，装在 /system/priv-app 才拿得到 -->
+    <uses-permission android:name="android.permission.FORCE_STOP_PACKAGES" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
@@ -45,17 +47,22 @@
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout"
             android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
 
-        <!-- 只处理真正的开机完成；故意不监听 MY_PACKAGE_REPLACED（会在用户看片时触发，抢前台） -->
+        <!-- 不再做「开机自动抢前台」：用户要求开机停在聚好看，手动进入 TvHome 时再清理。
+             清理动作在 MainActivity.onResume 里完成（见 StockCleaner）。
+
+             下面这个接收器只用于调试：不切换界面，只在后台跑一次清理，便于用 adb 验证权限。
+             不想保留可以整段删掉，不影响 TvHome 正常使用。 -->
         <receiver
-            android:name=".BootReceiver"
+            android:name=".DebugReceiver"
             android:exported="true"
             android:enabled="true">
-            <intent-filter android:priority="1000">
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            <intent-filter>
+                <action android:name="com.local.tvhome.DEBUG_KILL" />
             </intent-filter>
         </receiver>
     </application>
 </manifest>
+
 
 
 

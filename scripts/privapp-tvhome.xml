@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TvHome 需要的特权权限：让它在自己回到前台时能真正停掉聚好看进程。
+     由 /data/local/misc/rc.sh 在开机时复制到 /system/etc/permissions/ -->
+<permissions>
+    <privapp-permissions package="com.local.tvhome">
+        <permission name="android.permission.FORCE_STOP_PACKAGES"/>
+    </privapp-permissions>
+</permissions>
